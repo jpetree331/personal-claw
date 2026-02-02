@@ -1,0 +1,14 @@
+{
+  "name": "@openclaw/code-bridge",
+  "version": "1.0.0",
+  "description": "OpenClaw tool plugin for local code bridge (read/write/run in project folder).",
+  "type": "module",
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -16,8 +16,9 @@ RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
       rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
     fi
 # gosu: for Railway entrypoint to drop root after fixing volume permissions
+# python3 + pip: for Drive Playground service (same container as OpenClaw)
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gosu && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gosu python3 python3-pip python3-venv && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -39,6 +40,9 @@ ENV NODE_ENV=production
 RUN mkdir -p /app/.openclaw/extensions && \
     OPENCLAW_STATE_DIR=/app/.openclaw node dist/index.js plugins install @supermemory/openclaw-supermemory && \
     chown -R node:node /app/.openclaw
+
+# Drive Playground Python service (optional: started by entrypoint when GOOGLE_DRIVE_TOKEN_JSON is set)
+RUN pip3 install --break-system-packages --no-cache-dir -r scripts/drive_playground/requirements.txt
 
 # Railway: entrypoint runs as root, creates OPENCLAW_STATE_DIR on volume, chowns it, then runs app as node
 COPY scripts/railway-entrypoint.sh /app/railway-entrypoint.sh

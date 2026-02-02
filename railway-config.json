@@ -29,7 +29,7 @@
   },
   "plugins": {
     "load": {
-      "paths": ["/app/extensions/drive-playground"]
+      "paths": ["/app/extensions/drive-playground", "/app/extensions/code-bridge"]
     },
     "slots": {
       "memory": "openclaw-supermemory"
@@ -47,11 +47,26 @@
           "baseUrl": "${DRIVE_PLAYGROUND_BASE_URL}",
           "apiKey": "${DRIVE_PLAYGROUND_API_KEY}"
         }
+      },
+      "code-bridge": {
+        "enabled": true,
+        "config": {
+          "baseUrl": "${CODE_BRIDGE_BASE_URL}",
+          "apiKey": "${CODE_BRIDGE_API_KEY}"
+        }
       }
     }
   },
   "tools": {
-    "allow": ["drive_playground_list", "drive_playground_read", "drive_playground_write"]
+    "allow": [
+      "drive_playground_list",
+      "drive_playground_read",
+      "drive_playground_write",
+      "code_bridge_list",
+      "code_bridge_read",
+      "code_bridge_write",
+      "code_bridge_run"
+    ]
   },
   "channels": {
     "discord": {

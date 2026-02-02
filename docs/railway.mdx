@@ -101,12 +101,16 @@ If you deploy from the OpenClaw repo (e.g. Dockerfile → Railway) and want to u
    In Railway → your service → **Variables**, set:
    - `OPENCLAW_CONFIG_PATH=/app/railway-config.json`  
    - `OPENCLAW_GATEWAY_TOKEN` — your gateway auth token (required; the config file uses `${OPENCLAW_GATEWAY_TOKEN}` so the token is not stored in the repo)
-   - `ATLASCLOUD_API_KEY` — your Atlas Cloud API key if you use the Atlas provider (the config uses `${ATLASCLOUD_API_KEY}`)  
+   - `OPENROUTER_API_KEY` — your OpenRouter API key (required for the default config, which uses `openrouter/moonshotai/kimi-k2.5`). Get a key at [openrouter.ai](https://openrouter.ai).
+   - `USER_NUMBER` — for WhatsApp self-chat allowlist: your phone number in E.164 format (e.g. `+15551234567`); the config uses `${USER_NUMBER}` in `channels.whatsapp.allowFrom`
+   - `SUPERMEMORY_OPENCLAW_API_KEY` — (optional) for [Supermemory](https://supermemory.ai/docs/integrations/openclaw) plugin: your Supermemory API key (`sm_...`); requires Supermemory Pro plan  
    The gateway will read the config directly; no `mkdir` or `cp` in the start command is needed (that avoids hangs and shell parsing issues).
 
 3. **Start command**  
    In Railway → your service → **Settings** → Start Command, set:
-   - `node dist/index.js gateway`
+   - `node dist/index.js gateway`  
+   If you use a **volume** for state (e.g. mount at `/home/node/data`) and set `OPENCLAW_STATE_DIR`, the plugin is baked into the image at `/app/.openclaw/extensions` but the gateway may look for plugins in the state dir. Use this so the plugin is copied into the volume at startup and discovery finds it:
+   - `sh -c "if [ -n \"\$OPENCLAW_STATE_DIR\" ]; then mkdir -p \"\$OPENCLAW_STATE_DIR/extensions\" && cp -r /app/.openclaw/extensions/openclaw-supermemory \"\$OPENCLAW_STATE_DIR/extensions/\"; fi && node dist/index.js gateway"`
 
 4. **Port**  
    If Railway assigns a port via `PORT`, set:
@@ -118,7 +122,97 @@ If you deploy from the OpenClaw repo (e.g. Dockerfile → Railway) and want to u
 
 After deploy, use the gateway URL (e.g. `https://<your-railway-domain>/v1`) and your gateway token (the same value as `OPENCLAW_GATEWAY_TOKEN`) for OpenWebUI or other clients. To use the Control UI (dashboard) in the browser, the sample config sets `gateway.controlUi.dangerouslyDisableDeviceAuth: true` so you can connect with token only (no device pairing). Keep the token secret; anyone with it can access the gateway.
 
-**Security:** The sample `railway-config.json` in the repo uses placeholders (`${OPENCLAW_GATEWAY_TOKEN}`, `${ATLASCLOUD_API_KEY}`). Never commit real tokens or API keys; set them only in Railway Variables (or another secrets store). If you previously pushed a config file with real secrets, rotate those credentials and set the new values only in Railway.
+**Security:** The sample `railway-config.json` in the repo uses placeholders (`${OPENCLAW_GATEWAY_TOKEN}`, `${OPENROUTER_API_KEY}`, etc.). Never commit real tokens or API keys; set them only in Railway Variables (or another secrets store). If you previously pushed a config file with real secrets, rotate those credentials and set the new values only in Railway.
+
+### Optional: Drive Playground in the same Railway service
+
+You can run the **Drive Playground** Python service (Google Drive list/read/write for one folder) in the **same** Railway service as OpenClaw. The Dockerfile and entrypoint start it when the required variables are set; secrets stay in Railway Variables (no credential files in the image).
+
+1. **One-time OAuth locally**  
+   On your PC: run `scripts/drive_playground/drive_playground_service.py` once, complete the Google sign-in in the browser, then copy the contents of `scripts/drive_playground/token.json` (the whole file).
+
+2. **Railway Variables** (all secrets as variables):
+   - `GOOGLE_DRIVE_TOKEN_JSON` — paste the full contents of `token.json` (from step 1). Required for the Drive Playground service to run.
+   - `DRIVE_PLAYGROUND_API_KEY` — a secret you choose; the OpenClaw Drive Playground tool uses it to call the service. Required.
+   - `DRIVE_PLAYGROUND_FOLDER_ID` — (optional) Your Google Drive folder ID (from the folder URL). If unset, the service uses the path **Personal → AI Research → OpenClaw Playground**.
+   - `DRIVE_PLAYGROUND_PORT` — (optional) Port for the Python service inside the container. Default `8765`. OpenClaw calls `http://127.0.0.1:8765` (or this port).
+
+3. **Config**  
+   In your config file (e.g. `railway-config.json`), add the Drive Playground plugin and allow the tools. Example (merge into your existing `plugins` and `tools`):
+
+   ```json
+   "plugins": {
+     "entries": {
+       "drive-playground": {
+         "enabled": true,
+         "config": {
+           "baseUrl": "http://127.0.0.1:8765",
+           "apiKey": "${DRIVE_PLAYGROUND_API_KEY}"
+         }
+       }
+     }
+   },
+   "tools": {
+     "allow": ["drive_playground_list", "drive_playground_read", "drive_playground_write"]
+   }
+   ```
+
+   Use the same port as `DRIVE_PLAYGROUND_PORT` if you set it (e.g. `http://127.0.0.1:8765`).
+
+4. **Deploy**  
+   Push the repo (with the Drive Playground extension and updated Dockerfile/entrypoint). On deploy, if both `GOOGLE_DRIVE_TOKEN_JSON` and `DRIVE_PLAYGROUND_API_KEY` are set, the entrypoint starts the Python service on 127.0.0.1:8765, then starts the OpenClaw gateway. The bot can then use the Drive Playground tools to list/read/write files in your Drive folder.
+
+**Model provider:** OpenClaw does not talk to a generic “cloud API”; it uses **providers** with a prefix and model IDs. The primary model must be `provider/modelId` (e.g. `openrouter/moonshotai/kimi-k2.5` for OpenRouter). Built-in providers (OpenRouter, OpenAI, Anthropic, etc.) need no `models.providers` block—just set the API key in env (e.g. `OPENROUTER_API_KEY`). Custom providers must be defined under `models.providers` with `baseUrl`, `apiKey`, and `api` type. Picking a model only from the debug/Control UI list without a matching provider config will cause model calls to fail or hang and can produce “lane wait exceeded” in the logs.
+
+## Troubleshooting: “lane wait exceeded” / bot not replying
+
+If the bot accepts messages but never replies and logs show `lane wait exceeded` (or the reply task seems to hang):
+
+1. **Verify provider and model**  
+   The primary model must be `provider/modelId` (e.g. `openrouter/moonshotai/kimi-k2.5`). For **built-in providers** (OpenRouter, OpenAI, Anthropic), no `models.providers` block is needed—just set the provider’s API key in env (e.g. `OPENROUTER_API_KEY`). For **custom providers**, you must have a block under `models.providers` with `baseUrl`, `apiKey`, and `api` type.
+
+2. **Set the API key on Railway**  
+   Ensure the variable for your provider is set in Railway → your service → Variables (e.g. `OPENROUTER_API_KEY` for OpenRouter). Restart the service after changing variables.
+
+3. **Check model resolution**  
+   Run locally with the same config (same `OPENCLAW_CONFIG_PATH` and env vars):  
+   `openclaw gateway status`  
+   Confirm your chosen model appears under **Agents → main → primary** with no error. If it shows an error or “unknown model”, fix the provider config and try again.
+
+4. **Sanity check with a built-in provider**  
+   To confirm the rest of the stack (gateway, channels, Supermemory) works, temporarily switch to a built-in provider: set `agents.defaults.model.primary` to e.g. `openrouter/anthropic/claude-sonnet-4-5`, add `OPENROUTER_API_KEY` in Railway, and restart. If replies work with OpenRouter but not with your custom provider, the issue is with that provider’s baseUrl, api type, or network (e.g. Railway → Atlas connectivity or timeouts).
+
+### Drive Playground + Code Bridge (separate TOOLS service)
+
+If you run the **Drive Playground** (and optionally **Code Bridge**) in a **separate** Railway service (e.g. "Claw Tools Server"), OpenClaw needs these variables so it can call that service:
+
+**Required for Drive Playground:**
+
+- `DRIVE_PLAYGROUND_BASE_URL` — Full URL of your TOOLS service (e.g. `https://your-tools.up.railway.app`). No trailing slash.
+- `DRIVE_PLAYGROUND_API_KEY` — Same value as `DRIVE_PLAYGROUND_API_KEY` on the TOOLS service; the bot uses it to authenticate when calling the Drive Playground API.
+
+**Optional (only if you use the Code Bridge tool with a local bridge on your PC):**
+
+- `CODE_BRIDGE_BASE_URL` — Public URL of your local bridge (e.g. ngrok or Tailscale URL).
+- `CODE_BRIDGE_API_KEY` — Same value as the API key your local bridge expects.
+
+If `CODE_BRIDGE_*` is not set, the code-bridge plugin will still load; the tools will fail at runtime when used until you set the URL and key.
+
+## Troubleshooting: 502 / "plugin path not found"
+
+If the service fails to start and logs show **Config invalid** with `plugin path not found: /app/extensions/drive-playground` (or `code-bridge`), the Docker image does not contain those extensions at `/app/extensions/`. The gateway then never starts, so you get **502** when you try to talk to it.
+
+**Fix: ensure the build context includes the `extensions` folder.**
+
+1. **Set Railway Root Directory**  
+   In Railway → your **OpenClaw** service → **Settings** → **Build**, set **Root Directory** (or **Source**) to the directory that contains both the **Dockerfile** and the **`extensions`** folder.  
+   - If your repo has a nested structure (e.g. `openclaw-main/openclaw-main/` with the Dockerfile and `extensions` inside the inner folder), set Root Directory to that inner folder (e.g. `openclaw-main`). Then the build context is the app root, `COPY . .` puts everything at `/app/`, and `/app/extensions/drive-playground` and `/app/extensions/code-bridge` will exist in the image.
+
+2. **Confirm extensions are in the repo**  
+   Ensure `extensions/drive-playground` and `extensions/code-bridge` are committed and pushed to the branch Railway builds from. List the repo root (or the Root Directory you set) and verify those folders exist.
+
+3. **Redeploy**  
+   Trigger a new deploy. After the build, the container should have `/app/extensions/drive-playground` and `/app/extensions/code-bridge`, config validation will pass, and the gateway will start so OpenClaw can talk to your TOOLS service (using `DRIVE_PLAYGROUND_BASE_URL` and `DRIVE_PLAYGROUND_API_KEY`).
 
 ## Backups & migration
 

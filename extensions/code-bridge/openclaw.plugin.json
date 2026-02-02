@@ -1,0 +1,20 @@
+{
+  "id": "code-bridge",
+  "name": "Code Bridge",
+  "description": "Read/write files and run commands in a local project folder via the code bridge service (runs on your PC; OpenClaw calls it via ngrok/Tailscale).",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "description": "Base URL of the code bridge (e.g. https://your-ngrok-url.ngrok.io). No trailing slash."
+      },
+      "apiKey": {
+        "type": "string",
+        "description": "API key for the bridge. Can use env substitution, e.g. ${CODE_BRIDGE_API_KEY}."
+      }
+    },
+    "required": ["baseUrl"]
+  }
+}
