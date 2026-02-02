@@ -6,6 +6,9 @@
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
+    "controlUi": {
+      "dangerouslyDisableDeviceAuth": true
+    },
     "http": {
       "endpoints": {
         "chatCompletions": {

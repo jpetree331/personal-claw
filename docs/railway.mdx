@@ -90,6 +90,36 @@ If Telegram DMs are set to pairing, the setup wizard can approve the pairing cod
 5. Copy the **Bot Token** and paste into `/setup`
 6. Invite the bot to your server (OAuth2 URL Generator; scopes: `bot`, `applications.commands`)
 
+## Deploy from this repo (with config file)
+
+If you deploy from the OpenClaw repo (e.g. Dockerfile → Railway) and want to use a config file (e.g. `railway-config.json`) instead of the `/setup` wizard:
+
+1. **Config in the image**  
+   Ensure your config file is in the repo (e.g. `railway-config.json` at the repo root). The Dockerfile `COPY . .` puts it at `/app/railway-config.json` in the image.
+
+2. **Point the gateway at it and set secrets**  
+   In Railway → your service → **Variables**, set:
+   - `OPENCLAW_CONFIG_PATH=/app/railway-config.json`  
+   - `OPENCLAW_GATEWAY_TOKEN` — your gateway auth token (required; the config file uses `${OPENCLAW_GATEWAY_TOKEN}` so the token is not stored in the repo)
+   - `ATLASCLOUD_API_KEY` — your Atlas Cloud API key if you use the Atlas provider (the config uses `${ATLASCLOUD_API_KEY}`)  
+   The gateway will read the config directly; no `mkdir` or `cp` in the start command is needed (that avoids hangs and shell parsing issues).
+
+3. **Start command**  
+   In Railway → your service → **Settings** → Start Command, set:
+   - `node dist/index.js gateway`
+
+4. **Port**  
+   If Railway assigns a port via `PORT`, set:
+   - `OPENCLAW_GATEWAY_PORT` to the same value (e.g. `18789`), or match Railway’s Public Networking port.  
+   Your config can also set `gateway.port` in JSON.
+
+5. **No copy step**  
+   Do not use a start command that copies the config (e.g. `cp railway-config.json /home/node/.openclaw/openclaw.json`). Using `OPENCLAW_CONFIG_PATH` is enough and avoids startup hangs.
+
+After deploy, use the gateway URL (e.g. `https://<your-railway-domain>/v1`) and your gateway token (the same value as `OPENCLAW_GATEWAY_TOKEN`) for OpenWebUI or other clients. To use the Control UI (dashboard) in the browser, the sample config sets `gateway.controlUi.dangerouslyDisableDeviceAuth: true` so you can connect with token only (no device pairing). Keep the token secret; anyone with it can access the gateway.
+
+**Security:** The sample `railway-config.json` in the repo uses placeholders (`${OPENCLAW_GATEWAY_TOKEN}`, `${ATLASCLOUD_API_KEY}`). Never commit real tokens or API keys; set them only in Railway Variables (or another secrets store). If you previously pushed a config file with real secrets, rotate those credentials and set the new values only in Railway.
+
 ## Backups & migration
 
 Download a backup at:
