@@ -40,6 +40,16 @@
       }
     }
   },
+  "plugins": {
+    "entries": {
+      "openclaw-supermemory": {
+        "enabled": true,
+        "config": {
+          "apiKey": "${SUPERMEMORY_OPENCLAW_API_KEY}"
+        }
+      }
+    }
+  },
   "channels": {
     "discord": {
       "enabled": true,
