@@ -41,6 +41,12 @@
     }
   },
   "plugins": {
+    "load": {
+      "paths": ["/app/.openclaw/extensions"]
+    },
+    "slots": {
+      "memory": "openclaw-supermemory"
+    },
     "entries": {
       "openclaw-supermemory": {
         "enabled": true,
