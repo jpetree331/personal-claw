@@ -18,25 +18,12 @@
     }
   },
   "models": {
-    "providers": {
-      "atlascloud": {
-        "baseUrl": "https://api.atlascloud.ai/v1",
-        "apiKey": "${ATLASCLOUD_API_KEY}",
-        "api": "openai-completions",
-        "models": [
-          {
-            "id": "qwen3-max-20260123",
-            "name": "Qwen3 Max",
-            "compat": {}
-          }
-        ]
-      }
-    }
+    "providers": {}
   },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "atlascloud/qwen3-max-20260123"
+        "primary": "openrouter/moonshotai/kimi-k2.5"
       }
     }
   },
