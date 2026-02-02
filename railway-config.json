@@ -42,7 +42,7 @@
   },
   "plugins": {
     "load": {
-      "paths": ["/app/.openclaw/extensions"]
+      "paths": []
     },
     "slots": {
       "memory": "openclaw-supermemory"
