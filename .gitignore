@@ -66,6 +66,7 @@ apps/ios/*.mobileprovision
 .local/
 .vscode/
 IDENTITY.md
+!docs/reference/templates/IDENTITY.md
 USER.md
 .tgz
 
