@@ -39,5 +39,16 @@
         "primary": "atlascloud/qwen3-max-20260123"
       }
     }
+  },
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "token": "${DISCORD_BOT_TOKEN}"
+    },
+    "whatsapp": {
+      "selfChatMode": true,
+      "dmPolicy": "allowlist",
+      "allowFrom": ["${USER_NUMBER}"]
+    }
   }
 }
