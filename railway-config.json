@@ -1,4 +1,11 @@
 {
+  "session": {
+    "dmScope": "main",
+    "reset": {
+      "mode": "idle",
+      "idleMinutes": 525600
+    }
+  },
   "gateway": {
     "mode": "local",
     "bind": "lan",
