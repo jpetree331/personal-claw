@@ -40,8 +40,18 @@
         "config": {
           "apiKey": "${SUPERMEMORY_OPENCLAW_API_KEY}"
         }
+      },
+      "drive-playground": {
+        "enabled": true,
+        "config": {
+          "baseUrl": "${DRIVE_PLAYGROUND_BASE_URL}",
+          "apiKey": "${DRIVE_PLAYGROUND_API_KEY}"
+        }
       }
     }
+  },
+  "tools": {
+    "allow": ["drive_playground_list", "drive_playground_read", "drive_playground_write"]
   },
   "channels": {
     "discord": {
