@@ -62,6 +62,7 @@
       "token": "${DISCORD_BOT_TOKEN}"
     },
     "whatsapp": {
+      "enabled": true,
       "selfChatMode": true,
       "dmPolicy": "allowlist",
       "allowFrom": ["${USER_NUMBER}"]
