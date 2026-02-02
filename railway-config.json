@@ -29,7 +29,7 @@
   },
   "plugins": {
     "load": {
-      "paths": []
+      "paths": ["/app/extensions/drive-playground"]
     },
     "slots": {
       "memory": "openclaw-supermemory"
