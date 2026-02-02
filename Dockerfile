@@ -15,6 +15,10 @@ RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
       apt-get clean && \
       rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
     fi
+# gosu: for Railway entrypoint to drop root after fixing volume permissions
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gosu && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY ui/package.json ./ui/package.json
@@ -31,9 +35,15 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
-# Security hardening: Run as non-root user
-# The node:22-bookworm image includes a 'node' user (uid 1000)
-# This reduces the attack surface by preventing container escape via root privileges
-USER node
+# Install Supermemory plugin into a path in the image so it can be used or copied at runtime
+RUN mkdir -p /app/.openclaw/extensions && \
+    OPENCLAW_STATE_DIR=/app/.openclaw node dist/index.js plugins install @supermemory/openclaw-supermemory && \
+    chown -R node:node /app/.openclaw
 
-CMD ["node", "dist/index.js"]
+# Railway: entrypoint runs as root, creates OPENCLAW_STATE_DIR on volume, chowns it, then runs app as node
+COPY scripts/railway-entrypoint.sh /app/railway-entrypoint.sh
+RUN chmod +x /app/railway-entrypoint.sh
+# Do not set USER node here so entrypoint runs as root; it drops to node via gosu
+
+ENTRYPOINT ["/app/railway-entrypoint.sh"]
+CMD ["node", "dist/index.js", "gateway"]
