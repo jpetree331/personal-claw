@@ -61,6 +61,12 @@
       "enabled": true,
       "token": "${DISCORD_BOT_TOKEN}"
     },
+    "telegram": {
+      "enabled": true,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "dmPolicy": "allowlist",
+      "allowFrom": ["${TELEGRAM_USER_ID}"]
+    },
     "whatsapp": {
       "selfChatMode": true,
       "dmPolicy": "allowlist",
