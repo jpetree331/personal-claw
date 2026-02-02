@@ -1,0 +1,33 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "auth": {
+      "mode": "token",
+      "token": "a66ec26309366ab31be19fb3749db5def6b92ea979"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "models": {
+    "providers": {
+      "atlascloud": {
+        "baseUrl": "https://api.atlascloud.ai/v1",
+        "apiKey": "apikey-5f36c90dfd4341d3b0d1a35516e50717",
+        "api": "openai-completions"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "atlascloud/qwen3-max-20260123"
+      }
+    }
+  }
+}
