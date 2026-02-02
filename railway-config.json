@@ -19,7 +19,14 @@
       "atlascloud": {
         "baseUrl": "https://api.atlascloud.ai/v1",
         "apiKey": "${ATLASCLOUD_API_KEY}",
-        "api": "openai-completions"
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "qwen3-max-20260123",
+            "name": "Qwen3 Max",
+            "compat": {}
+          }
+        ]
       }
     }
   },
