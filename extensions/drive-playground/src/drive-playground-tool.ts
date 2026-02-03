@@ -64,9 +64,27 @@ export function createDrivePlaygroundTools(api: OpenClawPluginApi): AnyAgentTool
     }),
   });
   const writeSchema = Type.Object({
-    name: Type.String({ description: "File name (e.g. notes.txt, journal.md)." }),
-    content: Type.String({ description: "Full text content to write." }),
-    mime_type: Type.Optional(Type.String({ description: "MIME type; default text/plain." })),
+    name: Type.String({
+      description: "File name (e.g. notes.txt, report.docx, My Doc). Required.",
+    }),
+    content: Type.Optional(
+      Type.String({
+        description:
+          "Full text content. Use for text/markdown. Exactly one of content, file_url, or neither (empty Google app) is required.",
+      }),
+    ),
+    file_url: Type.Optional(
+      Type.String({
+        description:
+          "HTTP or signed URL to a binary file (e.g. MP3, Office, PDF). Service downloads and uploads to Drive. Exactly one of content, file_url, or neither (empty Google app) is required.",
+      }),
+    ),
+    mime_type: Type.Optional(
+      Type.String({
+        description:
+          "MIME type. Default text/plain. Examples: text/plain, text/markdown, audio/mpeg, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.google-apps.document, application/vnd.google-apps.spreadsheet, application/vnd.google-apps.presentation.",
+      }),
+    ),
     folder_id: Type.Optional(
       Type.String({
         description:
@@ -121,20 +139,39 @@ export function createDrivePlaygroundTools(api: OpenClawPluginApi): AnyAgentTool
       label: "Drive Playground (write)",
       name: "drive_playground_write",
       description:
-        "Create or update a file in the OpenClaw Playground folder (root or a subfolder). Omit folder_id for root; pass a subfolder id to write inside it. If a file with the same name exists in that folder, it is updated; otherwise created.",
+        "Create or update a file in the OpenClaw Playground folder. Three modes: (1) Text: supply content (and optional mime_type, default text/plain). (2) Binary: supply file_url (HTTP/signed URL) and mime_type; service downloads and uploads to Drive (e.g. Office, PDF, audio). (3) Empty Google Doc/Sheet/Slide: supply only name and mime_type application/vnd.google-apps.document, application/vnd.google-apps.spreadsheet, or application/vnd.google-apps.presentation; no content or file_url. Exactly one of content, file_url, or neither is required. Omit folder_id for Playground root.",
       parameters: writeSchema,
       execute: async (_id, params) => {
         const { baseUrl, apiKey } = getConfig(api);
         const name = typeof params.name === "string" ? params.name.trim() : "";
-        const content = typeof params.content === "string" ? params.content : "";
+        const content = typeof params.content === "string" ? params.content : undefined;
+        const file_url = typeof params.file_url === "string" ? params.file_url.trim() || undefined : undefined;
         const mime_type = typeof params.mime_type === "string" ? params.mime_type : "text/plain";
         const folder_id = typeof params.folder_id === "string" ? params.folder_id.trim() || undefined : undefined;
         if (!name) {
           throw new Error("name is required");
         }
+        const hasContent = content !== undefined && content !== "";
+        const hasFileUrl = file_url !== undefined && file_url !== "";
+        const emptyGoogleApp =
+          !hasContent &&
+          !hasFileUrl &&
+          /^application\/vnd\.google-apps\.(document|spreadsheet|presentation)$/.test(mime_type);
+        if (!hasContent && !hasFileUrl && !emptyGoogleApp) {
+          throw new Error(
+            "Exactly one of content, file_url, or neither (empty Google Doc/Sheet/Slide with mime_type application/vnd.google-apps.document|spreadsheet|presentation) is required.",
+          );
+        }
+        if ([hasContent, hasFileUrl, emptyGoogleApp].filter(Boolean).length > 1) {
+          throw new Error("Supply only one of content, file_url, or neither (empty Google app).");
+        }
+        const bodyPayload: Record<string, unknown> = { name, mime_type };
+        if (hasContent) bodyPayload.content = content;
+        if (hasFileUrl) bodyPayload.file_url = file_url;
+        if (folder_id !== undefined) bodyPayload.folder_id = folder_id;
         const { ok, status, body } = await fetchDrive(baseUrl, apiKey, "/write", {
           method: "POST",
-          body: JSON.stringify({ name, content, mime_type, folder_id }),
+          body: JSON.stringify(bodyPayload),
         });
         if (!ok) {
           throw new Error(`Drive Playground write failed: ${status} ${body}`);
