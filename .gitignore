@@ -77,3 +77,6 @@ scripts/delete_supermemory.py
 SCRIPT IDEA.txt
 scripts/drive_playground/credentials.json
 scripts/drive_playground/token.json
+
+# Claude Code per-machine permissions; can hold secrets
+.claude/settings.local.json
